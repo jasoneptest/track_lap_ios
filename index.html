@@ -149,7 +149,7 @@
 
 <script>
 (function() {
-  var STORAGE_KEY = "track_lap_counter_state_v8";
+  var STORAGE_KEY = "track_lap_counter_state_v9";
 
   var I18N = {
     "zh-HK": {
@@ -343,11 +343,10 @@
   var currentRoundIdx = 0;
   var laps = EVENTS[currentEvent];
 
-  // Timer state for accurate pause/resume & auto-save across reloads
   var isRunning = false;
   var isPaused = false;
-  var startTime = 0;        // timestamp when current running segment started
-  var accumulatedMs = 0;    // elapsed ms accumulated before current segment
+  var startTime = 0;
+  var accumulatedMs = 0;
   var timerId = null;
 
   var records = {};
@@ -396,9 +395,7 @@
         historyStack: historyStack
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-      // ignore storage quota errors
-    }
+    } catch (e) {}
   }
 
   function loadState() {
@@ -924,7 +921,10 @@
     }
     headers.push(lang.thRank);
 
-    var csv = "\uFEFF" + headers.join(",") + "\n";
+    // Escape and quote header fields
+    var quotedHeaders = headers.map(function(h) { return '"' + String(h).replace(/"/g, '""') + '"'; });
+    var csv = "\uFEFF" + quotedHeaders.join(",") + "\n";
+
     for (var i = 1; i <= TOTAL; i++) {
       var recs = records[i];
       var row = [lang.bibFmt(i)];
@@ -936,7 +936,12 @@
       }
       var rankTxt = document.getElementById("rank-" + i).textContent;
       row.push(rankTxt === "-" ? lang.csvUnfinished : rankTxt);
-      csv += row.join(",") + "\n";
+
+      // Quote every cell to guarantee exact text formatting (00:00:00.000) when opened in Excel
+      var quotedRow = row.map(function(cell) {
+        return '"' + String(cell).replace(/"/g, '""') + '"';
+      });
+      csv += quotedRow.join(",") + "\n";
     }
 
     var genderText = genderSelect.value;
@@ -975,7 +980,6 @@
     saveState();
   });
 
-  // Restore saved session if present
   var restored = loadState();
   buildUI();
   if (restored) {
