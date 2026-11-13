@@ -929,9 +929,9 @@
       var recs = records[i];
       var row = [lang.bibFmt(i)];
       for (var j = 0; j < laps.length; j++) {
-        row.push(j < recs.length ? formatFull(recs[j]) : "");
+        row.push(j < recs.length ? "'" + formatFull(recs[j]) : "");
         if (j < laps.length - 1) {
-          row.push(j + 1 < recs.length ? formatSplit(recs[j + 1] - recs[j]) : "");
+          row.push(j + 1 < recs.length ? "'" + formatSplit(recs[j + 1] - recs[j]) : "");
         }
       }
       var rankTxt = document.getElementById("rank-" + i).textContent;
