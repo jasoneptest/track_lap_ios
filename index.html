@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>田徑長跑數圈計時系統 (3000m / 5000m / 10000m)</title>
+<style>
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f4f6f9; overflow: hidden; }
+  .header { background: #1e293b; color: white; padding: 8px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; z-index: 20; }
+  .left-group, .right-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  select { padding: 6px 10px; font-size: 0.95rem; font-weight: bold; border-radius: 5px; border: none; background: #f8fafc; color: #0f172a; cursor: pointer; }
+  .timer { font-family: "Courier New", monospace; font-size: 1.75rem; font-weight: bold; color: #38bdf8; background: #0f172a; padding: 4px 12px; border-radius: 6px; letter-spacing: 1px; }
+  .quick-box { background: #334155; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
+  .quick-box input { width: 55px; font-size: 1.1rem; font-weight: bold; text-align: center; border-radius: 4px; border: none; padding: 3px; pointer-events: none; background: white; color: #0f172a; }
+  .feedback { color: #fde047; font-size: 0.85rem; font-weight: bold; min-width: 120px; }
+  .btn { padding: 7px 12px; font-size: 0.9rem; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; color: white; touch-action: manipulation; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-start { background: #22c55e; }
+  .btn-undo { background: #f59e0b; }
+  .btn-export { background: #3b82f6; }
+  .btn-reset { background: #64748b; }
+
+  .table-wrap { flex: 1; overflow: auto; background: white; border-bottom: 3px solid #cbd5e1; position: relative; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; text-align: center; }
+  th, td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 5px 8px; white-space: nowrap; }
+  
+  thead tr:first-child th { background: #e2e8f0; color: #0f172a; position: sticky; top: 0; z-index: 15; font-weight: bold; height: 28px; border-top: 1px solid #cbd5e1; }
+  thead tr:first-child th.dist-th { background: #dbeafe; color: #1e40af; font-size: 0.88rem; }
+  thead tr:nth-child(2) th { background: #f1f5f9; color: #1e293b; position: sticky; top: 28px; z-index: 15; font-weight: bold; height: 28px; }
+  thead tr:nth-child(2) th.split-th { background: #e0f2fe; color: #0369a1; }
+
+  td.split-td { background: #f0f9ff; color: #0369a1; font-family: "Courier New", monospace; font-size: 0.82rem; }
+  td.cum-td { background: #ffffff; font-family: "Courier New", monospace; font-weight: 600; cursor: pointer; }
+  td.cum-td:hover { background: #fef9c3; }
+
+  th.sticky-left, td:first-child { position: sticky; left: 0; background: #e2e8f0 !important; font-weight: bold; z-index: 20; min-width: 66px; cursor: pointer; border-left: 1px solid #cbd5e1; }
+  th.sticky-left { z-index: 30 !important; top: 0; }
+
+  th.sticky-right, td:last-child { position: sticky; right: 0; background: #fef08a !important; font-weight: bold; z-index: 20; min-width: 82px; cursor: pointer; border-left: 1px solid #cbd5e1; }
+  th.sticky-right { z-index: 30 !important; top: 0; }
+
+  tr.finished-row td { background-color: #dcfce7 !important; }
+  tr.finished-row td:first-child { background-color: #bbf7d0 !important; }
+  tr.finished-row td:last-child { background-color: #86efac !important; }
+
+  tr.status-row td { background-color: #fee2e2 !important; color: #991b1b; }
+  tr.status-row td:first-child, tr.status-row td:last-child { background-color: #fca5a5 !important; color: #7f1d1d; }
+
+  .keypad { height: 35vh; min-height: 210px; background: #cbd5e1; padding: 8px; display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; overflow-y: auto; }
+  .r-btn { background: white; border: 2px solid #94a3b8; border-radius: 7px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; user-select: none; touch-action: manipulation; padding: 2px; }
+  .r-btn:active:not(:disabled) { transform: scale(0.95); background: #bae6fd; }
+  .r-btn:disabled { background: #e2e8f0; opacity: 0.6; cursor: not-allowed; }
+  .r-btn.completed { background: #22c55e; border-color: #16a34a; color: white; }
+  .r-btn.status-out { background: #ef4444; border-color: #b91c1c; color: white; }
+  .r-num { font-size: 1.15rem; font-weight: bold; }
+  .r-lap { font-size: 0.72rem; margin-top: 2px; }
+
+  @media (max-width: 820px) {
+    .keypad { grid-template-columns: repeat(5, 1fr); height: 42vh; }
+  }
+
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 100; justify-content: center; align-items: center; }
+  .modal-backdrop.active { display: flex; }
+  .modal-box { background: white; border-radius: 10px; padding: 20px; width: 92%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+  .modal-box h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; }
+  .modal-info { font-size: 0.9rem; color: #475569; margin-bottom: 14px; background: #f1f5f9; padding: 8px; border-radius: 6px; }
+  .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .m-btn { padding: 9px; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; color: white; }
+  .m-del { background: #ef4444; }
+  .m-ins { background: #3b82f6; }
+  .m-dq { background: #dc2626; }
+  .m-dns { background: #7c3aed; }
+  .m-dnf { background: #d97706; }
+  .m-norm { background: #10b981; }
+  .m-close { width: 100%; padding: 8px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="left-group">
+    <select id="langSelect" aria-label="Language">
+      <option value="zh-HK" selected>繁體中文</option>
+      <option value="zh-CN">简体中文</option>
+      <option value="en">English</option>
+    </select>
+    <select id="eventSelect">
+      <option value="3000m" id="opt3000">3000m (7.5圈)</option>
+      <option value="5000m" id="opt5000" selected>5000m (12.5圈)</option>
+      <option value="10000m" id="opt10000">10000m (25圈)</option>
+    </select>
+    <div class="timer" id="timerDisplay">00:00:00.000</div>
+    <div class="quick-box" id="quickBox">
+      <span id="quickLabel">快輸:</span>
+      <input type="text" id="quickInput" readonly autocomplete="off">
+      <span class="feedback" id="feedback">點擊下方按鈕或輸入號碼</span>
+    </div>
+  </div>
+  <div class="right-group">
+    <button class="btn btn-start" id="startBtn">開始</button>
+    <button class="btn btn-undo" id="undoBtn" disabled>復原</button>
+    <button class="btn btn-export" id="exportBtn">匯出 CSV</button>
+    <button class="btn btn-reset" id="resetBtn">重設</button>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<div class="keypad" id="keypad"></div>
+
+<div class="modal-backdrop" id="editModal">
+  <div class="modal-box">
+    <h3 id="modalTitle">編輯紀錄</h3>
+    <div class="modal-info" id="modalInfo"></div>
+    <div class="modal-actions">
+      <button class="m-btn m-del" id="btnDelLap">刪除該圈時間</button>
+      <button class="m-btn m-ins" id="btnInsLap">插入時間</button>
+      <button class="m-btn m-dq" id="btnSetDQ">標記 DQ</button>
+      <button class="m-btn m-dns" id="btnSetDNS">標記 DNS</button>
+      <button class="m-btn m-dnf" id="btnSetDNF">標記 DNF</button>
+      <button class="m-btn m-norm" id="btnSetNormal">恢復正常狀態</button>
+    </div>
+    <button class="m-close" id="btnCloseModal">取消 / 關閉</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var I18N = {
+    "zh-HK": {
+      title: "田徑長跑數圈計時系統 (3000m / 5000m / 10000m)",
+      ev3000: "3000m (7.5圈)",
+      ev5000: "5000m (12.5圈)",
+      ev10000: "10000m (25圈)",
+      quick: "快輸:",
+      dblClickHint: "點擊下方按鈕或輸入號碼",
+      start: "開始",
+      running: "計時中...",
+      undo: "復原",
+      exportCsv: "匯出 CSV",
+      reset: "重設",
+      thBib: "號碼",
+      thRank: "名次",
+      thSplit: "單圈時間",
+      meterUnit: "米",
+      lapFmt: function(l) { return "第 " + l + " 圈"; },
+      bibFmt: function(n) { return n + " 號"; },
+      btnLapFmt: function(c, m) { return c + " / " + m + " 圈"; },
+      rankFmt: function(r) { return "第 " + r + " 名"; },
+      btnDoneFmt: function(r) { return "完賽 (第" + r + "名)"; },
+      recOkFmt: function(r, l, d) { return "✔ " + r + "號 第" + l + "圈 (" + d + "m)"; },
+      modalTitleFmt: function(r) { return "編輯 " + r + " 號運動員"; },
+      noRec: "無紀錄",
+      statusNormal: "正常比賽中",
+      modalInfoFmt: function(d, l, v, st, cnt) {
+        return "目標位置：<b>" + d + "（第 " + l + " 圈）</b><br>" +
+               "目前時間：<b>" + v + "</b><br>" +
+               "目前狀態：<b>" + st + "</b>（已錄 " + cnt + " 圈）";
+      },
+      btnDel: "刪除該圈時間",
+      btnIns: "插入時間",
+      btnDq: "標記 DQ",
+      btnDns: "標記 DNS",
+      btnDnf: "標記 DNF",
+      btnNorm: "恢復正常狀態",
+      btnClose: "取消 / 關閉",
+      alertNoDel: "該圈目前沒有時間紀錄可刪除。",
+      fbDelFmt: function(r, l) { return "已刪除 " + r + "號 第" + l + "圈"; },
+      alertMaxLap: "該運動員已達最大圈數，請先刪除一圈再插入。",
+      promptIns: "請輸入要插入的時間（格式 00:00:00.000）：",
+      alertTimeErr: "時間格式錯誤，請依照 00:00:00.000 格式輸入。",
+      fbInsFmt: function(r) { return "已插入 " + r + "號 時間"; },
+      fbStatusFmt: function(r, st) { return r + "號 設為 " + (st || "正常"); },
+      fbInputRange: "請輸入 1-40",
+      fbInputStatusFmt: function(n, st) { return n + "號為 " + st; },
+      fbInputDoneFmt: function(n) { return n + "號已完賽"; },
+      fbUndoFmt: function(r) { return "已復原 " + r + " 號"; },
+      confirmSwitch: "切換項目將清除目前未儲存紀錄，確定嗎？",
+      csvHeaderLapFmt: function(d, l) { return d + "米(第" + l + "圈)"; },
+      csvUnfinished: "未完賽",
+      csvFileSuffix: "_成績紀錄.csv",
+      confirmReset: "確定重設所有計時與紀錄？"
+    },
+    "zh-CN": {
+      title: "田径长跑数圈计时系统 (3000m / 5000m / 10000m)",
+      ev3000: "3000m (7.5圈)",
+      ev5000: "5000m (12.5圈)",
+      ev10000: "10000m (25圈)",
+      quick: "快输:",
+      dblClickHint: "点击下方按钮或输入号码",
+      start: "开始",
+      running: "计时中...",
+      undo: "撤销",
+      exportCsv: "导出 CSV",
+      reset: "重置",
+      thBib: "号码",
+      thRank: "名次",
+      thSplit: "单圈时间",
+      meterUnit: "米",
+      lapFmt: function(l) { return "第 " + l + " 圈"; },
+      bibFmt: function(n) { return n + " 号"; },
+      btnLapFmt: function(c, m) { return c + " / " + m + " 圈"; },
+      rankFmt: function(r) { return "第 " + r + " 名"; },
+      btnDoneFmt: function(r) { return "完赛 (第" + r + "名)"; },
+      recOkFmt: function(r, l, d) { return "✔ " + r + "号 第" + l + "圈 (" + d + "m)"; },
+      modalTitleFmt: function(r) { return "编辑 " + r + " 号运动员"; },
+      noRec: "无记录",
+      statusNormal: "正常比赛中",
+      modalInfoFmt: function(d, l, v, st, cnt) {
+        return "目标位置：<b>" + d + "（第 " + l + " 圈）</b><br>" +
+               "当前时间：<b>" + v + "</b><br>" +
+               "当前状态：<b>" + st + "</b>（已录 " + cnt + " 圈）";
+      },
+      btnDel: "删除该圈时间",
+      btnIns: "插入时间",
+      btnDq: "标记 DQ",
+      btnDns: "标记 DNS",
+      btnDnf: "标记 DNF",
+      btnNorm: "恢复正常状态",
+      btnClose: "取消 / 关闭",
+      alertNoDel: "该圈目前没有时间记录可删除。",
+      fbDelFmt: function(r, l) { return "已删除 " + r + "号 第" + l + "圈"; },
+      alertMaxLap: "该运动员已达最大圈数，请先删除一圈再插入。",
+      promptIns: "请输入要插入的时间（格式 00:00:00.000）：",
+      alertTimeErr: "时间格式错误，请依照 00:00:00.000 格式输入。",
+      fbInsFmt: function(r) { return "已插入 " + r + "号 时间"; },
+      fbStatusFmt: function(r, st) { return r + "号 设为 " + (st || "正常"); },
+      fbInputRange: "请输入 1-40",
+      fbInputStatusFmt: function(n, st) { return n + "号为 " + st; },
+      fbInputDoneFmt: function(n) { return n + "号已完赛"; },
+      fbUndoFmt: function(r) { return "已撤销 " + r + " 号"; },
+      confirmSwitch: "切换项目将清除当前未保存记录，确定吗？",
+      csvHeaderLapFmt: function(d, l) { return d + "米(第" + l + "圈)"; },
+      csvUnfinished: "未完赛",
+      csvFileSuffix: "_成绩记录.csv",
+      confirmReset: "确定重置所有计时与记录？"
+    },
+    "en": {
+      title: "Track Distance Lap Counter (3000m / 5000m / 10000m)",
+      ev3000: "3000m (7.5 Laps)",
+      ev5000: "5000m (12.5 Laps)",
+      ev10000: "10000m (25 Laps)",
+      quick: "Quick:",
+      dblClickHint: "Tap keypad buttons below",
+      start: "Start",
+      running: "Running...",
+      undo: "Undo",
+      exportCsv: "Export CSV",
+      reset: "Reset",
+      thBib: "Bib",
+      thRank: "Rank",
+      thSplit: "Split",
+      meterUnit: "m",
+      lapFmt: function(l) { return "Lap " + l; },
+      bibFmt: function(n) { return "#" + n; },
+      btnLapFmt: function(c, m) { return c + " / " + m + " Laps"; },
+      rankFmt: function(r) { return "#" + r; },
+      btnDoneFmt: function(r) { return "Fin (#" + r + ")"; },
+      recOkFmt: function(r, l, d) { return "✔ #" + r + " Lap " + l + " (" + d + "m)"; },
+      modalTitleFmt: function(r) { return "Edit Runner #" + r; },
+      noRec: "No record",
+      statusNormal: "Active",
+      modalInfoFmt: function(d, l, v, st, cnt) {
+        return "Target: <b>" + d + " (Lap " + l + ")</b><br>" +
+               "Current Time: <b>" + v + "</b><br>" +
+               "Status: <b>" + st + "</b> (" + cnt + " laps recorded)";
+      },
+      btnDel: "Delete Lap",
+      btnIns: "Insert Time",
+      btnDq: "Mark DQ",
+      btnDns: "Mark DNS",
+      btnDnf: "Mark DNF",
+      btnNorm: "Set Active",
+      btnClose: "Cancel / Close",
+      alertNoDel: "No time record to delete at this lap.",
+      fbDelFmt: function(r, l) { return "Deleted #" + r + " Lap " + l; },
+      alertMaxLap: "Max laps reached. Delete a lap before inserting.",
+      promptIns: "Enter time to insert (format 00:00:00.000):",
+      alertTimeErr: "Invalid format. Please use 00:00:00.000.",
+      fbInsFmt: function(r) { return "Inserted time for #" + r; },
+      fbStatusFmt: function(r, st) { return "#" + r + " set to " + (st || "Active"); },
+      fbInputRange: "Enter 1-40",
+      fbInputStatusFmt: function(n, st) { return "#" + n + " is " + st; },
+      fbInputDoneFmt: function(n) { return "#" + n + " finished"; },
+      fbUndoFmt: function(r) { return "Undid #" + r; },
+      confirmSwitch: "Switching event will clear unsaved records. Continue?",
+      csvHeaderLapFmt: function(d, l) { return d + "m(Lap " + l + ")"; },
+      csvUnfinished: "DNF/Unfinished",
+      csvFileSuffix: "_Results.csv",
+      confirmReset: "Reset all timers and records?"
+    }
+  };
+
+  var EVENTS = {
+    "3000m": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5],
+    "5000m": [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5],
+    "10000m": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+  };
+  var TOTAL = 40;
+  var currentLang = "zh-HK";
+  var currentEvent = "5000m";
+  var laps = EVENTS[currentEvent];
+  var isRunning = false;
+  var startTime = 0;
+  var timerId = null;
+
+  var records = {};
+  var statuses = {};
+  var historyStack = [];
+  var editTarget = { runnerId: null, lapIdx: null };
+
+  var langSelect = document.getElementById("langSelect");
+  var eventSelect = document.getElementById("eventSelect");
+  var timerDisplay = document.getElementById("timerDisplay");
+  var quickBox = document.getElementById("quickBox");
+  var quickLabel = document.getElementById("quickLabel");
+  var quickInput = document.getElementById("quickInput");
+  var feedback = document.getElementById("feedback");
+  var startBtn = document.getElementById("startBtn");
+  var undoBtn = document.getElementById("undoBtn");
+  var exportBtn = document.getElementById("exportBtn");
+  var resetBtn = document.getElementById("resetBtn");
+  var editModal = document.getElementById("editModal");
+
+  function t() { return I18N[currentLang]; }
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+  function pad3(n) { return n < 10 ? "00" + n : (n < 100 ? "0" + n : "" + n); }
+
+  function formatFull(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.floor(ms / 1000);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    var mil = Math.floor(ms % 1000);
+    return pad2(h) + ":" + pad2(m) + ":" + pad2(sec) + "." + pad3(mil);
+  }
+
+  function formatSplit(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.floor(ms / 1000);
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    var mil = Math.floor(ms % 1000);
+    return pad2(m) + ":" + pad2(sec) + "." + pad3(mil);
+  }
+
+  function parseTimeStr(str) {
+    var parts = str.trim().split(":");
+    if (parts.length !== 3) return null;
+    var h = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    var secParts = parts[2].split(".");
+    var s = parseInt(secParts[0], 10);
+    var ms = secParts.length > 1 ? parseInt(secParts[1].padEnd(3, "0").slice(0, 3), 10) : 0;
+    if (isNaN(h) || isNaN(m) || isNaN(s) || isNaN(ms)) return null;
+    return ((h * 3600 + m * 60 + s) * 1000) + ms;
+  }
+
+  function updateStaticTexts() {
+    var lang = t();
+    document.title = lang.title;
+    document.getElementById("opt3000").textContent = lang.ev3000;
+    document.getElementById("opt5000").textContent = lang.ev5000;
+    document.getElementById("opt10000").textContent = lang.ev10000;
+
+    quickLabel.textContent = lang.quick;
+    if (!isRunning && historyStack.length === 0) {
+      feedback.textContent = lang.dblClickHint;
+    }
+    startBtn.textContent = isRunning ? lang.running : lang.start;
+    undoBtn.textContent = lang.undo;
+    exportBtn.textContent = lang.exportCsv;
+    resetBtn.textContent = lang.reset;
+
+    document.getElementById("btnDelLap").textContent = lang.btnDel;
+    document.getElementById("btnInsLap").textContent = lang.btnIns;
+    document.getElementById("btnSetDQ").textContent = lang.btnDq;
+    document.getElementById("btnSetDNS").textContent = lang.btnDns;
+    document.getElementById("btnSetDNF").textContent = lang.btnDnf;
+    document.getElementById("btnSetNormal").textContent = lang.btnNorm;
+    document.getElementById("btnCloseModal").textContent = lang.btnClose;
+  }
+
+  function processQuickInput(num) {
+    var lang = t();
+    if (!isRunning) return;
+    if (isNaN(num) || num < 1 || num > TOTAL) {
+      feedback.textContent = lang.fbInputRange;
+      return;
+    }
+    if (statuses[num]) {
+      feedback.textContent = lang.fbInputStatusFmt(num, statuses[num]);
+      return;
+    }
+    if (records[num].length >= laps.length) {
+      feedback.textContent = lang.fbInputDoneFmt(num);
+      return;
+    }
+    recordLap(num);
+  }
+
+  function buildUI() {
+    updateStaticTexts();
+    var lang = t();
+    var thead = document.getElementById("tableHead");
+    var tbody = document.getElementById("tableBody");
+    var keypad = document.getElementById("keypad");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    keypad.innerHTML = "";
+
+    var trDist = document.createElement("tr");
+    var trHeader = document.createElement("tr");
+
+    var thNum = document.createElement("th");
+    thNum.rowSpan = 2;
+    thNum.className = "sticky-left";
+    thNum.textContent = lang.thBib;
+    trDist.appendChild(thNum);
+
+    for (var k = 0; k < laps.length; k++) {
+      var hasSplit = k < laps.length - 1;
+      var distMeters = Math.round(laps[k] * 400);
+
+      var thDist = document.createElement("th");
+      thDist.className = "dist-th";
+      if (hasSplit) thDist.colSpan = 2;
+      thDist.textContent = distMeters + lang.meterUnit;
+      trDist.appendChild(thDist);
+
+      var thLap = document.createElement("th");
+      thLap.textContent = lang.lapFmt(laps[k]);
+      trHeader.appendChild(thLap);
+
+      if (hasSplit) {
+        var thSplit = document.createElement("th");
+        thSplit.className = "split-th";
+        thSplit.textContent = lang.thSplit;
+        trHeader.appendChild(thSplit);
+      }
+    }
+
+    var thRank = document.createElement("th");
+    thRank.rowSpan = 2;
+    thRank.className = "sticky-right";
+    thRank.textContent = lang.thRank;
+    trDist.appendChild(thRank);
+
+    thead.appendChild(trDist);
+    thead.appendChild(trHeader);
+
+    for (var i = 1; i <= TOTAL; i++) {
+      if (!records[i]) records[i] = [];
+      if (!statuses[i]) statuses[i] = "";
+
+      var tr = document.createElement("tr");
+      tr.id = "row-" + i;
+
+      var tdNum = document.createElement("td");
+      tdNum.textContent = lang.bibFmt(i);
+      (function(rid) {
+        tdNum.ondblclick = function() { openModal(rid, 0); };
+      })(i);
+      tr.appendChild(tdNum);
+
+      for (var j = 0; j < laps.length; j++) {
+        var tdCum = document.createElement("td");
+        tdCum.id = "cum-" + i + "-" + j;
+        tdCum.className = "cum-td";
+        tdCum.textContent = "-";
+        (function(rid, lidx) {
+          tdCum.ondblclick = function() { openModal(rid, lidx); };
+        })(i, j);
+        tr.appendChild(tdCum);
+
+        if (j < laps.length - 1) {
+          var tdSpl = document.createElement("td");
+          tdSpl.id = "spl-" + i + "-" + j;
+          tdSpl.className = "split-td";
+          tdSpl.textContent = "-";
+          tr.appendChild(tdSpl);
+        }
+      }
+
+      var tdRank = document.createElement("td");
+      tdRank.id = "rank-" + i;
+      tdRank.textContent = "-";
+      (function(rid) {
+        tdRank.ondblclick = function() { openModal(rid, 0); };
+      })(i);
+      tr.appendChild(tdRank);
+      tbody.appendChild(tr);
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "r-btn";
+      btn.id = "btn-" + i;
+      btn.disabled = !isRunning;
+      (function(rid) {
+        btn.onclick = function() { recordLap(rid); };
+      })(i);
+      btn.innerHTML = '<span class="r-num">' + i + '</span><span class="r-lap" id="blap-' + i + '">' + lang.btnLapFmt(0, laps[laps.length - 1]) + '</span>';
+      keypad.appendChild(btn);
+    }
+    refreshAll();
+  }
+
+  function refreshAll() {
+    var lang = t();
+    var totalLaps = laps.length;
+    var maxLap = laps[totalLaps - 1];
+    var finishers = [];
+
+    for (var i = 1; i <= TOTAL; i++) {
+      var recs = records[i];
+      var st = statuses[i];
+      if (!st && recs.length === totalLaps) {
+        finishers.push({ id: i, finishMs: recs[totalLaps - 1] });
+      }
+    }
+    finishers.sort(function(a, b) { return a.finishMs - b.finishMs; });
+
+    var rankMap = {};
+    for (var f = 0; f < finishers.length; f++) {
+      rankMap[finishers[f].id] = f + 1;
+    }
+
+    for (var r = 1; r <= TOTAL; r++) {
+      var rRecs = records[r];
+      var rSt = statuses[r];
+      var tr = document.getElementById("row-" + r);
+      var btn = document.getElementById("btn-" + r);
+      var blap = document.getElementById("blap-" + r);
+      var rankTd = document.getElementById("rank-" + r);
+
+      for (var c = 0; c < totalLaps; c++) {
+        var cumCell = document.getElementById("cum-" + r + "-" + c);
+        cumCell.textContent = c < rRecs.length ? formatFull(rRecs[c]) : "-";
+        if (c < totalLaps - 1) {
+          var splCell = document.getElementById("spl-" + r + "-" + c);
+          if (c + 1 < rRecs.length) {
+            splCell.textContent = formatSplit(rRecs[c + 1] - rRecs[c]);
+          } else {
+            splCell.textContent = "-";
+          }
+        }
+      }
+
+      tr.className = "";
+      btn.className = "r-btn";
+
+      if (rSt) {
+        tr.className = "status-row";
+        rankTd.textContent = rSt;
+        btn.className = "r-btn status-out";
+        btn.disabled = true;
+        blap.textContent = rSt;
+      } else if (rRecs.length === totalLaps) {
+        var rk = rankMap[r];
+        tr.className = "finished-row";
+        rankTd.textContent = lang.rankFmt(rk);
+        btn.className = "r-btn completed";
+        btn.disabled = true;
+        blap.textContent = lang.btnDoneFmt(rk);
+      } else {
+        rankTd.textContent = "-";
+        btn.disabled = !isRunning;
+        var curLap = rRecs.length === 0 ? 0 : laps[rRecs.length - 1];
+        blap.textContent = lang.btnLapFmt(curLap, maxLap);
+      }
+    }
+  }
+
+  function recordLap(rid) {
+    if (!isRunning || statuses[rid]) return;
+    var recs = records[rid];
+    if (recs.length >= laps.length) return;
+    var nowMs = Date.now() - startTime;
+    recs.push(nowMs);
+    historyStack.push({ type: "add", runnerId: rid });
+    undoBtn.disabled = false;
+    refreshAll();
+    var cell = document.getElementById("cum-" + rid + "-" + (recs.length - 1));
+    if (cell) cell.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    var lapLabel = laps[recs.length - 1];
+    feedback.textContent = t().recOkFmt(rid, lapLabel, Math.round(lapLabel * 400));
+  }
+
+  function openModal(rid, lidx) {
+    var lang = t();
+    editTarget = { runnerId: rid, lapIdx: lidx };
+    var recs = records[rid];
+    var lapName = laps[lidx];
+    var distName = Math.round(lapName * 400) + lang.meterUnit;
+    var curVal = lidx < recs.length ? formatFull(recs[lidx]) : lang.noRec;
+    document.getElementById("modalTitle").textContent = lang.modalTitleFmt(rid);
+    document.getElementById("modalInfo").innerHTML = lang.modalInfoFmt(
+      distName,
+      lapName,
+      curVal,
+      statuses[rid] || lang.statusNormal,
+      recs.length
+    );
+    editModal.className = "modal-backdrop active";
+  }
+
+  function closeModal() {
+    editModal.className = "modal-backdrop";
+  }
+
+  document.getElementById("btnDelLap").onclick = function() {
+    var lang = t();
+    var rid = editTarget.runnerId;
+    var lidx = editTarget.lapIdx;
+    var recs = records[rid];
+    if (lidx >= recs.length) {
+      alert(lang.alertNoDel);
+      return;
+    }
+    recs.splice(lidx, 1);
+    refreshAll();
+    feedback.textContent = lang.fbDelFmt(rid, laps[lidx]);
+    closeModal();
+  };
+
+  document.getElementById("btnInsLap").onclick = function() {
+    var lang = t();
+    var rid = editTarget.runnerId;
+    var lidx = editTarget.lapIdx;
+    var recs = records[rid];
+    if (recs.length >= laps.length) {
+      alert(lang.alertMaxLap);
+      return;
+    }
+    var defaultStr = lidx < recs.length ? formatFull(recs[lidx]) : (isRunning ? formatFull(Date.now() - startTime) : "00:01:30.000");
+    var input = prompt(lang.promptIns, defaultStr);
+    if (input === null) return;
+    var ms = parseTimeStr(input);
+    if (ms === null) {
+      alert(lang.alertTimeErr);
+      return;
+    }
+    var insertPos = lidx > recs.length ? recs.length : lidx;
+    recs.splice(insertPos, 0, ms);
+    refreshAll();
+    feedback.textContent = lang.fbInsFmt(rid);
+    closeModal();
+  };
+
+  function setRunnerStatus(st) {
+    var rid = editTarget.runnerId;
+    statuses[rid] = st;
+    refreshAll();
+    feedback.textContent = t().fbStatusFmt(rid, st);
+    closeModal();
+  }
+
+  document.getElementById("btnSetDQ").onclick = function() { setRunnerStatus("DQ"); };
+  document.getElementById("btnSetDNS").onclick = function() { setRunnerStatus("DNS"); };
+  document.getElementById("btnSetDNF").onclick = function() { setRunnerStatus("DNF"); };
+  document.getElementById("btnSetNormal").onclick = function() { setRunnerStatus(""); };
+  document.getElementById("btnCloseModal").onclick = closeModal;
+
+  langSelect.onchange = function() {
+    currentLang = langSelect.value;
+    document.documentElement.lang = currentLang === "en" ? "en" : (currentLang === "zh-CN" ? "zh-Hans" : "zh-Hant-HK");
+    buildUI();
+  };
+
+  startBtn.onclick = function() {
+    if (isRunning) return;
+    isRunning = true;
+    startTime = Date.now();
+    timerId = setInterval(function() {
+      timerDisplay.textContent = formatFull(Date.now() - startTime);
+    }, 15);
+    eventSelect.disabled = true;
+    startBtn.textContent = t().running;
+    startBtn.disabled = true;
+    refreshAll();
+  };
+
+  quickBox.onclick = function() {
+    if (!isRunning) return;
+    var digit = prompt(t().quick + " 請輸入運動員號碼 (1-40)：", "");
+    if (digit !== null && digit.trim() !== "") {
+      var num = parseInt(digit.trim(), 10);
+      if (!isNaN(num)) {
+        quickInput.value = num;
+        processQuickInput(num);
+        setTimeout(function() { quickInput.value = ""; }, 800);
+      }
+    }
+  };
+
+  undoBtn.onclick = function() {
+    if (historyStack.length === 0) return;
+    var last = historyStack.pop();
+    if (records[last.runnerId].length > 0) {
+      records[last.runnerId].pop();
+    }
+    if (historyStack.length === 0) undoBtn.disabled = true;
+    refreshAll();
+    feedback.textContent = t().fbUndoFmt(last.runnerId);
+  };
+
+  eventSelect.onchange = function() {
+    if (historyStack.length > 0 && !confirm(t().confirmSwitch)) {
+      eventSelect.value = currentEvent;
+      return;
+    }
+    currentEvent = eventSelect.value;
+    laps = EVENTS[currentEvent];
+    records = {};
+    statuses = {};
+    historyStack = [];
+    undoBtn.disabled = true;
+    buildUI();
+  };
+
+  exportBtn.onclick = function() {
+    var lang = t();
+    var headers = [lang.thBib];
+    for (var k = 0; k < laps.length; k++) {
+      var distMeters = Math.round(laps[k] * 400);
+      headers.push(lang.csvHeaderLapFmt(distMeters, laps[k]));
+      if (k < laps.length - 1) headers.push(lang.thSplit);
+    }
+    headers.push(lang.thRank);
+
+    var csv = "\uFEFF" + headers.join(",") + "\n";
+    for (var i = 1; i <= TOTAL; i++) {
+      var recs = records[i];
+      var row = [lang.bibFmt(i)];
+      for (var j = 0; j < laps.length; j++) {
+        row.push(j < recs.length ? formatFull(recs[j]) : "");
+        if (j < laps.length - 1) {
+          row.push(j + 1 < recs.length ? formatSplit(recs[j + 1] - recs[j]) : "");
+        }
+      }
+      var rankTxt = document.getElementById("rank-" + i).textContent;
+      row.push(rankTxt === "-" ? lang.csvUnfinished : rankTxt);
+      csv += row.join(",") + "\n";
+    }
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = currentEvent + lang.csvFileSuffix;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  resetBtn.onclick = function() {
+    if ((isRunning || historyStack.length > 0) && !confirm(t().confirmReset)) return;
+    clearInterval(timerId);
+    isRunning = false;
+    timerDisplay.textContent = "00:00:00.000";
+    eventSelect.disabled = false;
+    startBtn.disabled = false;
+    quickInput.value = "";
+    undoBtn.disabled = true;
+    records = {};
+    statuses = {};
+    historyStack = [];
+    buildUI();
+  };
+
+  buildUI();
+})();
+</script>
+</body>
+</html>
