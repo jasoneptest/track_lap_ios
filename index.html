@@ -28,18 +28,22 @@
   
   thead tr:first-child th { background: #e2e8f0; color: #0f172a; position: sticky; top: 0; z-index: 15; font-weight: bold; height: 28px; border-top: 1px solid #cbd5e1; }
   thead tr:first-child th.dist-th { background: #dbeafe; color: #1e40af; font-size: 0.88rem; }
-  thead tr:nth-child(2) th { background: #f1f5f9; color: #1e293b; position: sticky; top: 28px; z-index: 15; font-weight: bold; height: 28px; }
+  thead tr:nth-child(2) th { background: #f1f5f9; color: #1e293b; position: sticky; top: 28px; z-index: 15; font-weight: bold; height: 28px; user-select: none; }
+  thead tr:nth-child(2) th.lap-th { cursor: pointer; }
+  thead tr:nth-child(2) th.lap-th:hover { background: #e2e8f0; }
   thead tr:nth-child(2) th.split-th { background: #e0f2fe; color: #0369a1; }
 
   td.split-td { background: #f0f9ff; color: #0369a1; font-family: "Courier New", monospace; font-size: 0.82rem; }
   td.cum-td { background: #ffffff; font-family: "Courier New", monospace; font-weight: 600; cursor: pointer; }
   td.cum-td:hover { background: #fef9c3; }
 
-  th.sticky-left, td:first-child { position: sticky; left: 0; background: #e2e8f0 !important; font-weight: bold; z-index: 20; min-width: 66px; cursor: pointer; border-left: 1px solid #cbd5e1; }
+  th.sticky-left, td:first-child { position: sticky; left: 0; background: #e2e8f0 !important; font-weight: bold; z-index: 20; min-width: 74px; cursor: pointer; border-left: 1px solid #cbd5e1; user-select: none; }
   th.sticky-left { z-index: 30 !important; top: 0; }
+  th.sticky-left:hover { background: #cbd5e1 !important; }
 
-  th.sticky-right, td:last-child { position: sticky; right: 0; background: #fef08a !important; font-weight: bold; z-index: 20; min-width: 82px; cursor: pointer; border-left: 1px solid #cbd5e1; }
+  th.sticky-right, td:last-child { position: sticky; right: 0; background: #fef08a !important; font-weight: bold; z-index: 20; min-width: 86px; cursor: pointer; border-left: 1px solid #cbd5e1; user-select: none; }
   th.sticky-right { z-index: 30 !important; top: 0; }
+  th.sticky-right:hover { background: #fde047 !important; }
 
   tr.finished-row td { background-color: #dcfce7 !important; }
   tr.finished-row td:first-child { background-color: #bbf7d0 !important; }
@@ -52,6 +56,8 @@
   .r-btn { background: white; border: 2px solid #94a3b8; border-radius: 7px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; user-select: none; touch-action: manipulation; padding: 2px; }
   .r-btn:active:not(:disabled) { transform: scale(0.95); background: #bae6fd; }
   .r-btn:disabled { background: #e2e8f0; opacity: 0.6; cursor: not-allowed; }
+  .r-btn.penultimate { background: #f97316; border-color: #c2410c; color: white; }
+  .r-btn.penultimate:active:not(:disabled) { background: #ea580c; }
   .r-btn.completed { background: #22c55e; border-color: #16a34a; color: white; }
   .r-btn.status-out { background: #ef4444; border-color: #b91c1c; color: white; }
   .r-num { font-size: 1.15rem; font-weight: bold; }
@@ -63,7 +69,7 @@
 
   .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 100; justify-content: center; align-items: center; }
   .modal-backdrop.active { display: flex; }
-  .modal-box { background: white; border-radius: 10px; padding: 20px; width: 92%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+  .modal-box { background: white; border-radius: 10px; padding: 20px; width: 92%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
   .modal-box h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.1rem; }
   .modal-info { font-size: 0.9rem; color: #475569; margin-bottom: 14px; background: #f1f5f9; padding: 8px; border-radius: 6px; }
   .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
@@ -75,6 +81,13 @@
   .m-dnf { background: #d97706; }
   .m-norm { background: #10b981; }
   .m-close { width: 100%; padding: 8px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+  .batch-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .batch-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.95rem; font-weight: bold; color: #1e293b; }
+  .batch-row input { padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 5px; font-size: 0.95rem; font-family: "Courier New", monospace; font-weight: bold; width: 165px; text-align: center; }
+  .batch-range { display: flex; align-items: center; gap: 6px; }
+  .batch-range input { width: 65px; }
+  .m-confirm { width: 100%; padding: 9px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -143,13 +156,36 @@
       <button class="m-btn m-dnf" id="btnSetDNF">標記 DNF</button>
       <button class="m-btn m-norm" id="btnSetNormal">恢復正常狀態</button>
     </div>
-    <button class="m-close" id="btnCloseModal">取消 / 關閉</button>
+    <button class="m-close" id="btnCloseModal">取消</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="batchModal">
+  <div class="modal-box">
+    <h3 id="batchTitle">批次時間插入相同時間</h3>
+    <div class="modal-info" id="batchInfo"></div>
+    <div class="batch-form">
+      <div class="batch-row">
+        <span id="batchRangeLabel">倒數號碼範圍：</span>
+        <div class="batch-range">
+          <input type="number" id="batchFromInput" min="1" max="40" value="1">
+          <span>→</span>
+          <input type="number" id="batchToInput" min="1" max="40" value="40">
+        </div>
+      </div>
+      <div class="batch-row">
+        <span id="batchTimeLabel">插入相同時間：</span>
+        <input type="text" id="batchTimeInput" value="00:01:30.000">
+      </div>
+    </div>
+    <button class="m-confirm" id="btnBatchConfirm">確定</button>
+    <button class="m-close" id="btnBatchClose">取消</button>
   </div>
 </div>
 
 <script>
 (function() {
-  var STORAGE_KEY = "track_lap_counter_state_v9";
+  var STORAGE_KEY = "track_lap_counter_state_v11";
 
   var I18N = {
     "zh-HK": {
@@ -194,7 +230,7 @@
       btnDns: "標記 DNS",
       btnDnf: "標記 DNF",
       btnNorm: "恢復正常狀態",
-      btnClose: "取消 / 關閉",
+      btnClose: "取消",
       alertNoDel: "該圈目前沒有時間紀錄可刪除。",
       fbDelFmt: function(r, l) { return "已刪除 " + r + "號 第" + l + "圈"; },
       alertMaxLap: "該運動員已達最大圈數，請先刪除一圈再插入。",
@@ -209,7 +245,16 @@
       confirmSwitch: "切換項目將清除目前未重設的紀錄，確定嗎？",
       csvHeaderLapFmt: function(d, l) { return d + "米(第" + l + "圈)"; },
       csvUnfinished: "未完賽",
-      confirmReset: "確定重設所有計時與自動保存的紀錄？此操作無法還原。"
+      confirmReset: "確定重設所有計時與自動保存的紀錄？此操作無法還原。",
+      sortBibAsc: "已按號碼 Ascending 排列",
+      sortRankAsc: "已按名次 Ascending 排列",
+      batchTitleFmt: function(d, l) { return "批次時間插入 — " + d + " (第 " + l + " 圈)"; },
+      batchInfoText: "將由起始號碼倒數至結束號碼，為範圍內未達最大圈數的運動員插入相同時間。",
+      batchRangeLabel: "號碼範圍 (1→40)：",
+      batchTimeLabel: "插入相同時間：",
+      batchConfirm: "確定",
+      alertBatchRangeErr: "請輸入有效的 1 至 40 號碼範圍。",
+      fbBatchOkFmt: function(cnt, fromN, toN, l) { return "✔ 已為 " + cnt + " 位運動員 (" + fromN + "→" + toN + "號) 第" + l + "圈插入時間"; }
     },
     "zh-CN": {
       title: "田径长跑数圈计时系统 (3000m / 5000m / 10000m)",
@@ -253,7 +298,7 @@
       btnDns: "标记 DNS",
       btnDnf: "标记 DNF",
       btnNorm: "恢复正常状态",
-      btnClose: "取消 / 关闭",
+      btnClose: "取消",
       alertNoDel: "该圈目前没有时间记录可删除。",
       fbDelFmt: function(r, l) { return "已删除 " + r + "号 第" + l + "圈"; },
       alertMaxLap: "该运动员已达最大圈数，请先删除一圈再插入。",
@@ -268,7 +313,16 @@
       confirmSwitch: "切换项目将清除当前未重置的记录，确定吗？",
       csvHeaderLapFmt: function(d, l) { return d + "米(第" + l + "圈)"; },
       csvUnfinished: "未完赛",
-      confirmReset: "确定重置所有计时与自动保存的记录？此操作无法还原。"
+      confirmReset: "确定重置所有计时与自动保存的记录？此操作无法还原。",
+      sortBibAsc: "已按号码 Ascending 排列",
+      sortRankAsc: "已按名次 Ascending 排列",
+      batchTitleFmt: function(d, l) { return "批量时间插入 — " + d + " (第 " + l + " 圈)"; },
+      batchInfoText: "将由起始号码倒数至结束号码，为范围内未达最大圈数的运动员插入相同时间。",
+      batchRangeLabel: "号码范围 (1→40)：",
+      batchTimeLabel: "插入相同时间：",
+      batchConfirm: "确定",
+      alertBatchRangeErr: "请输入有效的 1 至 40 号码范围。",
+      fbBatchOkFmt: function(cnt, fromN, toN, l) { return "✔ 已为 " + cnt + " 位运动员 (" + fromN + "→" + toN + "号) 第" + l + "圈插入时间"; }
     },
     "en": {
       title: "Track Distance Lap Counter (3000m / 5000m / 10000m)",
@@ -312,7 +366,7 @@
       btnDns: "Mark DNS",
       btnDnf: "Mark DNF",
       btnNorm: "Set Active",
-      btnClose: "Cancel / Close",
+      btnClose: "Cancel",
       alertNoDel: "No time record to delete at this lap.",
       fbDelFmt: function(r, l) { return "Deleted #" + r + " Lap " + l; },
       alertMaxLap: "Max laps reached. Delete a lap before inserting.",
@@ -327,7 +381,16 @@
       confirmSwitch: "Switching event will clear un-reset records. Continue?",
       csvHeaderLapFmt: function(d, l) { return d + "m(Lap " + l + ")"; },
       csvUnfinished: "DNF/Unfinished",
-      confirmReset: "Reset all timers and auto-saved records? This cannot be undone."
+      confirmReset: "Reset all timers and auto-saved records? This cannot be undone.",
+      sortBibAsc: "Sorted by Bib Ascending",
+      sortRankAsc: "Sorted by Rank Ascending",
+      batchTitleFmt: function(d, l) { return "Batch Time Insert — " + d + " (Lap " + l + ")"; },
+      batchInfoText: "Inserts the same time in descending bib order from Start Bib down to End Bib.",
+      batchRangeLabel: "Bib Range (1→40):",
+      batchTimeLabel: "Insert Same Time:",
+      batchConfirm: "Confirm",
+      alertBatchRangeErr: "Please enter valid bib numbers between 1 and 40.",
+      fbBatchOkFmt: function(cnt, fromN, toN, l) { return "✔ Inserted time for " + cnt + " runners (#" + fromN + "→#" + toN + ") at Lap " + l; }
     }
   };
 
@@ -343,6 +406,9 @@
   var currentRoundIdx = 0;
   var laps = EVENTS[currentEvent];
 
+  // Sort mode: "bib" (Ascending 1..40) or "rank" (Ascending Rank 1..N, then unfinished)
+  var sortMode = "bib";
+
   var isRunning = false;
   var isPaused = false;
   var startTime = 0;
@@ -353,6 +419,7 @@
   var statuses = {};
   var historyStack = [];
   var editTarget = { runnerId: null, lapIdx: null };
+  var batchTargetLapIdx = 0;
 
   var langSelect = document.getElementById("langSelect");
   var genderSelect = document.getElementById("genderSelect");
@@ -369,6 +436,7 @@
   var exportBtn = document.getElementById("exportBtn");
   var resetBtn = document.getElementById("resetBtn");
   var editModal = document.getElementById("editModal");
+  var batchModal = document.getElementById("batchModal");
 
   function t() { return I18N[currentLang]; }
 
@@ -386,6 +454,7 @@
         currentGenderIdx: currentGenderIdx,
         currentEvent: currentEvent,
         currentRoundIdx: currentRoundIdx,
+        sortMode: sortMode,
         isRunning: isRunning,
         isPaused: isPaused,
         startTime: startTime,
@@ -412,6 +481,7 @@
         laps = EVENTS[currentEvent];
       }
       if (typeof st.currentRoundIdx === "number") currentRoundIdx = st.currentRoundIdx;
+      if (st.sortMode === "bib" || st.sortMode === "rank") sortMode = st.sortMode;
 
       isRunning = !!st.isRunning;
       isPaused = !!st.isPaused;
@@ -513,6 +583,12 @@
     document.getElementById("btnSetNormal").textContent = lang.btnNorm;
     document.getElementById("btnCloseModal").textContent = lang.btnClose;
 
+    document.getElementById("batchInfo").textContent = lang.batchInfoText;
+    document.getElementById("batchRangeLabel").textContent = lang.batchRangeLabel;
+    document.getElementById("batchTimeLabel").textContent = lang.batchTimeLabel;
+    document.getElementById("btnBatchConfirm").textContent = lang.batchConfirm;
+    document.getElementById("btnBatchClose").textContent = lang.btnClose;
+
     if (isRunning) {
       startBtn.textContent = lang.running;
       startBtn.disabled = true;
@@ -556,6 +632,100 @@
     recordLap(num);
   }
 
+  function attachTripleClick(el, callback) {
+    var clickCount = 0;
+    var clickTimer = null;
+    el.addEventListener("click", function(e) {
+      clickCount++;
+      if (clickCount === 1) {
+        clickTimer = setTimeout(function() {
+          clickCount = 0;
+        }, 500);
+      } else if (clickCount === 3) {
+        clearTimeout(clickTimer);
+        clickCount = 0;
+        callback(e);
+      }
+    });
+  }
+
+  function openBatchModal(lapIdx) {
+    var lang = t();
+    batchTargetLapIdx = lapIdx;
+    var lapName = laps[lapIdx];
+    var distName = Math.round(lapName * 400) + lang.meterUnit;
+    document.getElementById("batchTitle").textContent = lang.batchTitleFmt(distName, lapName);
+    document.getElementById("batchFromInput").value = 1;
+    document.getElementById("batchToInput").value = 40;
+    var defaultStr = (isRunning || isPaused) ? formatFull(getElapsedMs()) : "00:01:30.000";
+    document.getElementById("batchTimeInput").value = defaultStr;
+    batchModal.className = "modal-backdrop active";
+  }
+
+  function closeBatchModal() {
+    batchModal.className = "modal-backdrop";
+  }
+
+  document.getElementById("btnBatchClose").onclick = closeBatchModal;
+
+  document.getElementById("btnBatchConfirm").onclick = function() {
+    var lang = t();
+    var fromNum = parseInt(document.getElementById("batchFromInput").value, 10);
+    var toNum = parseInt(document.getElementById("batchToInput").value, 10);
+    var timeStr = document.getElementById("batchTimeInput").value;
+
+    if (isNaN(fromNum) || isNaN(toNum) || fromNum < 1 || fromNum > TOTAL || toNum < 1 || toNum > TOTAL) {
+      alert(lang.alertBatchRangeErr);
+      return;
+    }
+    var ms = parseTimeStr(timeStr);
+    if (ms === null) {
+      alert(lang.alertTimeErr);
+      return;
+    }
+
+    var high = Math.max(fromNum, toNum);
+    var low = Math.min(fromNum, toNum);
+    var insertedCount = 0;
+
+    for (var rid = high; rid >= low; rid--) {
+      if (statuses[rid]) continue;
+      var recs = records[rid];
+      if (recs.length >= laps.length) continue;
+      var insertPos = batchTargetLapIdx > recs.length ? recs.length : batchTargetLapIdx;
+      recs.splice(insertPos, 0, ms);
+      insertedCount++;
+    }
+
+    refreshAll();
+    saveState();
+    feedback.textContent = lang.fbBatchOkFmt(insertedCount, low, high, laps[batchTargetLapIdx]);
+    closeBatchModal();
+  };
+
+  function getSortedRunnerIds(rankMap) {
+    var ids = [];
+    for (var i = 1; i <= TOTAL; i++) ids.push(i);
+
+    if (sortMode === "rank") {
+      ids.sort(function(a, b) {
+        var rA = rankMap[a];
+        var rB = rankMap[b];
+        if (rA !== undefined && rB !== undefined) return rA - rB;
+        if (rA !== undefined) return -1;
+        if (rB !== undefined) return 1;
+        // For unfinished runners, sort by more laps completed descending, then bib ascending
+        var lenA = statuses[a] ? -1 : records[a].length;
+        var lenB = statuses[b] ? -1 : records[b].length;
+        if (lenA !== lenB) return lenB - lenA;
+        return a - b;
+      });
+    } else {
+      ids.sort(function(a, b) { return a - b; });
+    }
+    return ids;
+  }
+
   function buildUI() {
     updateControlStates();
     var lang = t();
@@ -572,7 +742,15 @@
     var thNum = document.createElement("th");
     thNum.rowSpan = 2;
     thNum.className = "sticky-left";
-    thNum.textContent = lang.thBib;
+    thNum.id = "thBibHeader";
+    thNum.textContent = lang.thBib + (sortMode === "bib" ? " ▲" : "");
+    thNum.onclick = function() {
+      sortMode = "bib";
+      updateSortHeaders();
+      refreshAll();
+      saveState();
+      feedback.textContent = t().sortBibAsc;
+    };
     trDist.appendChild(thNum);
 
     for (var k = 0; k < laps.length; k++) {
@@ -586,7 +764,14 @@
       trDist.appendChild(thDist);
 
       var thLap = document.createElement("th");
+      thLap.className = "lap-th";
+      thLap.title = "點擊三下批次時間插入相同時間";
       thLap.textContent = lang.lapFmt(laps[k]);
+      (function(lidx) {
+        attachTripleClick(thLap, function() {
+          openBatchModal(lidx);
+        });
+      })(k);
       trHeader.appendChild(thLap);
 
       if (hasSplit) {
@@ -600,7 +785,15 @@
     var thRank = document.createElement("th");
     thRank.rowSpan = 2;
     thRank.className = "sticky-right";
-    thRank.textContent = lang.thRank;
+    thRank.id = "thRankHeader";
+    thRank.textContent = lang.thRank + (sortMode === "rank" ? " ▲" : "");
+    thRank.onclick = function() {
+      sortMode = "rank";
+      updateSortHeaders();
+      refreshAll();
+      saveState();
+      feedback.textContent = t().sortRankAsc;
+    };
     trDist.appendChild(thRank);
 
     thead.appendChild(trDist);
@@ -662,6 +855,14 @@
     refreshAll();
   }
 
+  function updateSortHeaders() {
+    var lang = t();
+    var thBib = document.getElementById("thBibHeader");
+    var thRank = document.getElementById("thRankHeader");
+    if (thBib) thBib.textContent = lang.thBib + (sortMode === "bib" ? " ▲" : "");
+    if (thRank) thRank.textContent = lang.thRank + (sortMode === "rank" ? " ▲" : "");
+  }
+
   function refreshAll() {
     var lang = t();
     var totalLaps = laps.length;
@@ -680,6 +881,14 @@
     var rankMap = {};
     for (var f = 0; f < finishers.length; f++) {
       rankMap[finishers[f].id] = f + 1;
+    }
+
+    // Reorder tbody rows according to current sortMode (Ascending)
+    var tbody = document.getElementById("tableBody");
+    var sortedIds = getSortedRunnerIds(rankMap);
+    for (var s = 0; s < sortedIds.length; s++) {
+      var rowEl = document.getElementById("row-" + sortedIds[s]);
+      if (rowEl) tbody.appendChild(rowEl);
     }
 
     for (var r = 1; r <= TOTAL; r++) {
@@ -722,6 +931,10 @@
       } else {
         rankTd.textContent = "-";
         btn.disabled = !isRunning;
+        // Check if on penultimate lap (second-to-last lap completed, next tap finishes race)
+        if (rRecs.length === totalLaps - 1) {
+          btn.className = "r-btn penultimate";
+        }
         var curLap = rRecs.length === 0 ? 0 : laps[rRecs.length - 1];
         blap.textContent = lang.btnLapFmt(curLap, maxLap);
       }
@@ -921,11 +1134,26 @@
     }
     headers.push(lang.thRank);
 
-    // Escape and quote header fields
     var quotedHeaders = headers.map(function(h) { return '"' + String(h).replace(/"/g, '""') + '"'; });
     var csv = "\uFEFF" + quotedHeaders.join(",") + "\n";
 
-    for (var i = 1; i <= TOTAL; i++) {
+    // Export following the current table sorting order
+    var totalLaps = laps.length;
+    var finishers = [];
+    for (var fIdx = 1; fIdx <= TOTAL; fIdx++) {
+      if (!statuses[fIdx] && records[fIdx].length === totalLaps) {
+        finishers.push({ id: fIdx, finishMs: records[fIdx][totalLaps - 1] });
+      }
+    }
+    finishers.sort(function(a, b) { return a.finishMs - b.finishMs; });
+    var rankMap = {};
+    for (var rIdx = 0; rIdx < finishers.length; rIdx++) {
+      rankMap[finishers[rIdx].id] = rIdx + 1;
+    }
+    var exportIds = getSortedRunnerIds(rankMap);
+
+    for (var idx = 0; idx < exportIds.length; idx++) {
+      var i = exportIds[idx];
       var recs = records[i];
       var row = [lang.bibFmt(i)];
       for (var j = 0; j < laps.length; j++) {
@@ -937,7 +1165,6 @@
       var rankTxt = document.getElementById("rank-" + i).textContent;
       row.push(rankTxt === "-" ? lang.csvUnfinished : rankTxt);
 
-      // Quote every cell to guarantee exact text formatting (00:00:00.000) when opened in Excel
       var quotedRow = row.map(function(cell) {
         return '"' + String(cell).replace(/"/g, '""') + '"';
       });
@@ -966,6 +1193,7 @@
     isPaused = false;
     startTime = 0;
     accumulatedMs = 0;
+    sortMode = "bib";
     timerDisplay.textContent = "00:00:00.000";
     quickInput.value = "";
     undoBtn.disabled = true;
