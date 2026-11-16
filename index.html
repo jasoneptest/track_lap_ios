@@ -934,8 +934,12 @@
         splCell.className = "split-td";
         if (c < rRecs.length) {
           cumCell.textContent = formatFull(rRecs[c]);
-          var segMs = c === 0 ? rRecs[0] : (rRecs[c] - rRecs[c - 1]);
-          splCell.textContent = formatSplit(segMs);
+          if (c + 1 < rRecs.length) {
+            var segMs = rRecs[c + 1] - rRecs[c];
+            splCell.textContent = formatSplit(segMs);
+          } else {
+            splCell.textContent = "-";
+          }
         } else {
           cumCell.textContent = "-";
           splCell.textContent = "-";
@@ -1198,8 +1202,9 @@
       var row = [lang.bibFmt(i)];
       for (var j = 0; j < laps.length; j++) {
         row.push(j < recs.length ? "'" + formatFull(recs[j]) : "");
-        var segVal = j === 0 ? recs[0] : (recs[j] - recs[j - 1]);
-        row.push(j < recs.length ? "'" + formatSplit(segVal) : "");
+        var hasNext = (j + 1 < recs.length);
+        var segVal = hasNext ? (recs[j + 1] - recs[j]) : 0;
+        row.push(hasNext ? "'" + formatSplit(segVal) : "");
       }
       var rankTxt = document.getElementById("rank-" + i).textContent;
       row.push(rankTxt === "-" ? lang.csvUnfinished : rankTxt);
